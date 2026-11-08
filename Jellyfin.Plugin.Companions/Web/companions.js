@@ -132,10 +132,15 @@
     }
 
     function sectionHtml(title, cardsHtml, kind) {
+        // Book cards are links, not Jellyfin items: their row is not an "itemsContainer", so scripts of
+        // other plugins that add cards to Jellyfin's item rows leave it alone.
+        var container = kind === 'books'
+            ? '<div class="scrollSlider focuscontainer-x cmp-slider">'
+            : '<div is="emby-itemscontainer" class="scrollSlider focuscontainer-x itemsContainer">';
         return '<div class="verticalSection detailVerticalSection ' + SECTION_CLASS + '" data-cmp-kind="' + kind + '">'
             + '<h2 class="sectionTitle sectionTitle-cards padded-right">' + esc(title) + '</h2>'
             + '<div is="emby-scroller" class="padded-top-focusscale padded-bottom-focusscale no-padding" data-centerfocus="true">'
-            + '<div is="emby-itemscontainer" class="scrollSlider focuscontainer-x itemsContainer">' + cardsHtml + '</div>'
+            + container + cardsHtml + '</div>'
             + '</div></div>';
     }
 

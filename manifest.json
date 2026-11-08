@@ -9,6 +9,14 @@
         "imageUrl":  "https://raw.githubusercontent.com/skriewel/jellyfin-companions/main/images/logo.png",
         "versions":  [
                          {
+                             "version":  "1.0.1.0",
+                             "changelog":  "Audiobookshelf covers: falls back to the original image when resizing fails and accepts covers without a content type; failures are logged and shown by Explain. The book row is no longer a Jellyfin item row, so other plugins do not add their cards to it.",
+                             "targetAbi":  "12.0.0.0",
+                             "sourceUrl":  "https://github.com/skriewel/jellyfin-companions/releases/download/v1.0.1.0/Companions_1.0.1.0.zip",
+                             "checksum":  "c38b6243ae3f4c182107652f52358667",
+                             "timestamp":  "2026-11-08T14:17:45Z"
+                         },
+                         {
                              "version":  "1.0.0.0",
                              "changelog":  "First release: soundtracks from the music library, books and audiobooks from Audiobookshelf, Kavita, Grimmory and BookOrbit",
                              "targetAbi":  "12.0.0.0",

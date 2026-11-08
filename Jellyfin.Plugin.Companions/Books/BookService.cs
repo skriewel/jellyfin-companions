@@ -139,6 +139,74 @@ public sealed class BookService
 
     public void ClearCache() => _cache.Clear();
 
+    /// <summary>
+    /// Loads a book's cover from its server. Detail says what happened (logged when it fails), e.g.
+    /// "200 image/webp" or "404 from …". Audiobookshelf: when the resized cover fails, the original is tried.
+    /// </summary>
+    public async Task<(byte[]? Bytes, string? ContentType, string Detail)> FetchCoverAsync(BookHit hit, BookServerConfig server, CancellationToken ct)
+    {
+        var urls = new List<string> { hit.CoverUrl! };
+        if (server.Kind == "Audiobookshelf")
+        {
+            urls.Add(hit.CoverUrl!.Split('?')[0] + "?raw=1");
+        }
+
+        var details = new List<string>();
+        var source = SourceFor(server);
+        foreach (var url in urls)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.Accept.ParseAdd("image/webp,image/jpeg,image/png,image/*;q=0.8");
+            source.Authorize(req);
+            try
+            {
+                using var resp = await NewClient().SendAsync(req, ct).ConfigureAwait(false);
+                var type = resp.Content.Headers.ContentType?.MediaType;
+                var bytes = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+                type ??= Sniff(bytes);
+                if (resp.IsSuccessStatusCode && bytes.Length > 0 && type is not null && type.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                {
+                    return (bytes, type, $"{(int)resp.StatusCode} {type}");
+                }
+
+                details.Add($"{(int)resp.StatusCode} {type ?? "no type"} ({bytes.Length} bytes) from {url}");
+            }
+            catch (HttpRequestException ex)
+            {
+                details.Add($"{ex.Message} ({url})");
+            }
+            catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+            {
+                details.Add($"timeout ({url})");
+            }
+        }
+
+        var detail = string.Join("; ", details);
+        _logger.LogWarning("Companions: no cover for \"{Title}\": {Detail}", hit.Title, detail);
+        return (null, null, detail);
+    }
+
+    // some servers send covers without a content type
+    private static string? Sniff(byte[] b)
+    {
+        if (b.Length > 3 && b[0] == 0xFF && b[1] == 0xD8)
+        {
+            return "image/jpeg";
+        }
+
+        if (b.Length > 8 && b[0] == 0x89 && b[1] == (byte)'P')
+        {
+            return "image/png";
+        }
+
+        if (b.Length > 12 && b[8] == (byte)'W' && b[9] == (byte)'E' && b[10] == (byte)'B' && b[11] == (byte)'P')
+        {
+            return "image/webp";
+        }
+
+        return null;
+    }
+
     private async Task<BookResult> LookupAsync(BaseItem title, PluginConfiguration cfg, CancellationToken ct)
     {
         var authors = SourceAuthors(title);

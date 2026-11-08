@@ -154,30 +154,14 @@ public class CompanionsController : ControllerBase
             return NotFound();
         }
 
-        var source = _books.SourceFor(server);
-        using var req = new HttpRequestMessage(HttpMethod.Get, hit.CoverUrl);
-        source.Authorize(req);
-        try
+        var cover = await _books.FetchCoverAsync(hit, server, ct).ConfigureAwait(false);
+        if (cover.Bytes is null)
         {
-            using var resp = await _books.NewClient().SendAsync(req, ct).ConfigureAwait(false);
-            var type = resp.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
-            if (!resp.IsSuccessStatusCode || !type.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-            {
-                return NotFound();
-            }
+            return NotFound();
+        }
 
-            var bytes = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
-            Response.Headers.CacheControl = "private, max-age=86400";
-            return File(bytes, type);
-        }
-        catch (HttpRequestException)
-        {
-            return NotFound();
-        }
-        catch (TaskCanceledException) when (!ct.IsCancellationRequested)
-        {
-            return NotFound();
-        }
+        Response.Headers.CacheControl = "private, max-age=86400";
+        return File(cover.Bytes, cover.ContentType!);
     }
 
     // ------------------------------------------------------------------ admin
@@ -236,6 +220,19 @@ public class CompanionsController : ControllerBase
 
         var authors = _books.SourceAuthors(item);
         var result = item is Movie or Series ? await _books.GetAsync(item, ct).ConfigureAwait(false) : null;
+        var covers = new List<object>();
+        foreach (var b in result?.Books ?? Array.Empty<BookHit>())
+        {
+            var server = _books.Server(b.ServerId);
+            if (server is null || b.CoverUrl is null)
+            {
+                covers.Add(new { b.Title, status = "no cover url" });
+                continue;
+            }
+
+            var c = await _books.FetchCoverAsync(b, server, ct).ConfigureAwait(false);
+            covers.Add(new { b.Title, status = c.Detail, bytes = c.Bytes?.Length });
+        }
         return Json(new
         {
             name = item.Name,
@@ -245,6 +242,7 @@ public class CompanionsController : ControllerBase
             tags = item.Tags.Where(t => t.StartsWith("based on", StringComparison.OrdinalIgnoreCase)),
             soundtracks = item is MusicAlbum a ? _soundtracks.TitlesFor(a) : _soundtracks.AlbumsFor(item),
             books = result?.Books,
+            covers,
             errors = result?.Errors
         });
     }
