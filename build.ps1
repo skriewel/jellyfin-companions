@@ -1,6 +1,6 @@
 # Builds the plugin and packs a ready-to-install folder + zip into .\dist
 param(
-    [string]$Version = "1.0.3.0"
+    [string]$Version = "1.0.4.0"
 )
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
@@ -24,7 +24,7 @@ Copy-Item (Join-Path $root "images\logo.png") $folder
 
 $meta = [ordered]@{
     category    = "General"
-    changelog   = "Books: titles are also searched without a leading number or article (3 Body Problem -> Body Problem), so book servers that search literally find The Three-Body Problem even when Jellyfin knows no source author."
+    changelog   = "Books: a book also matches through its book series (Silo -> Wool, Shift, Dust) in Audiobookshelf, Grimmory and BookOrbit; books of a series are listed in series order."
     description = "Links movies and series to their soundtrack in your music library and to the book or audiobook in Audiobookshelf, Kavita, Grimmory or BookOrbit."
     guid        = "5d0a3a1e-2e48-4358-b9a5-5942845aedb4"
     name        = "Companions"

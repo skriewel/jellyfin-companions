@@ -16,7 +16,27 @@ public sealed record BookHit(
     IReadOnlyList<string> Authors,
     string Kind,
     string? Url,
-    string? CoverUrl);
+    string? CoverUrl)
+{
+    /// <summary>Gets the book series the book belongs to ("Silo" for "Wool"), as far as the server says.</summary>
+    public IReadOnlyList<string> Series { get; init; } = Array.Empty<string>();
+
+    /// <summary>Gets the position in its series (1 for "Wool"), for sorting.</summary>
+    public double? Position { get; init; }
+
+    /// <summary>"Silo #1" -> ("Silo", 1); "Silo" -> ("Silo", null).</summary>
+    public static (string Name, double? Position) SplitSeries(string text)
+    {
+        var s = text.Trim();
+        var hash = s.LastIndexOf('#');
+        if (hash > 0 && double.TryParse(s[(hash + 1)..].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var pos))
+        {
+            return (s[..hash].Trim(), pos);
+        }
+
+        return (s, null);
+    }
+}
 
 /// <summary>A book server could not be asked.</summary>
 public sealed class BookSourceException : Exception
@@ -200,6 +220,22 @@ public sealed class AudiobookshelfSource : BookSource
                 }
             }
 
+            // books whose series matches ("Silo" -> "Wool", "Shift", "Dust"); the search leaves their authors out
+            foreach (var match in Arr(json, "series"))
+            {
+                var seriesName = Str(Prop(match, "series"), "name");
+                var index = 0;
+                foreach (var book in Arr(match, "books"))
+                {
+                    index++;
+                    if (Parse(book, null, seriesName) is { } hit)
+                    {
+                        // these items come without their sequence; the server lists them in series order
+                        hits.Add(hit.Position is null ? hit with { Position = index } : hit);
+                    }
+                }
+            }
+
             // the search finds books by title; books by an author come from the author's page
             foreach (var author in Arr(json, "authors"))
             {
@@ -227,7 +263,7 @@ public sealed class AudiobookshelfSource : BookSource
         return hits;
     }
 
-    private BookHit? Parse(JsonElement item, string? knownAuthor = null)
+    private BookHit? Parse(JsonElement item, string? knownAuthor = null, string? knownSeries = null)
     {
         var id = Str(item, "id");
         var media = Prop(item, "media");
@@ -255,7 +291,41 @@ public sealed class AudiobookshelfSource : BookSource
         var hasEbook = Prop(media, "ebookFile").ValueKind == JsonValueKind.Object || !string.IsNullOrEmpty(Str(media, "ebookFormat"));
         var kind = hasAudio || !hasEbook ? "audiobook" : "ebook";
 
-        return new BookHit(Config.Id, id, title!, authors, kind, $"{PublicBase}/item/{Uri.EscapeDataString(id)}", $"{BaseUrl}/api/items/{Uri.EscapeDataString(id)}/cover?width=300");
+        // expanded items: "series": [{ name, sequence }]; minified ones (author page): "seriesName": "Silo #1, Other #2"
+        var series = new List<string>();
+        double? position = null;
+        foreach (var s in Arr(meta, "series"))
+        {
+            if (Str(s, "name") is { Length: > 0 } sn)
+            {
+                series.Add(sn);
+                if (position is null && double.TryParse(Str(s, "sequence"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var seq))
+                {
+                    position = seq;
+                }
+            }
+        }
+
+        if (series.Count == 0 && Str(meta, "seriesName") is { Length: > 0 } names)
+        {
+            foreach (var part in names.Split(", ", StringSplitOptions.RemoveEmptyEntries))
+            {
+                var (name, pos) = BookHit.SplitSeries(part);
+                series.Add(name);
+                position ??= pos;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(knownSeries) && !series.Contains(knownSeries))
+        {
+            series.Add(knownSeries);
+        }
+
+        return new BookHit(Config.Id, id, title!, authors, kind, $"{PublicBase}/item/{Uri.EscapeDataString(id)}", $"{BaseUrl}/api/items/{Uri.EscapeDataString(id)}/cover?width=300")
+        {
+            Series = series,
+            Position = position
+        };
     }
 
     private async Task<List<string>> LibrariesAsync(CancellationToken ct)
@@ -434,7 +504,38 @@ public sealed partial class OpdsSource : BookSource
                 web = path.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? path : PublicBase + "/" + path.TrimStart('/');
             }
 
-            hits.Add(new BookHit(Config.Id, id, title!, authors, kind, web, coverUrl));
+            // Grimmory: <meta property="belongs-to-collection">Silo</meta> (+ group-position);
+            // BookOrbit: <link rel="http://opds-spec.org/sort/series" title="Silo #1"/>
+            var series = new List<string>();
+            double? position = null;
+            foreach (var m in entry.Elements().Where(e => e.Name.LocalName == "meta"))
+            {
+                var prop = (string?)m.Attribute("property");
+                if (prop == "belongs-to-collection" && !string.IsNullOrWhiteSpace(m.Value))
+                {
+                    series.Add(m.Value.Trim());
+                }
+                else if (prop == "group-position" && double.TryParse(m.Value.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var gp))
+                {
+                    position ??= gp;
+                }
+            }
+
+            foreach (var l in links.Where(l => (string?)l.Attribute("rel") == "http://opds-spec.org/sort/series"))
+            {
+                if ((string?)l.Attribute("title") is { Length: > 0 } st)
+                {
+                    var (name, pos) = BookHit.SplitSeries(st);
+                    if (!series.Contains(name))
+                    {
+                        series.Add(name);
+                    }
+
+                    position ??= pos;
+                }
+            }
+
+            hits.Add(new BookHit(Config.Id, id, title!, authors, kind, web, coverUrl) { Series = series, Position = position });
         }
 
         return hits;

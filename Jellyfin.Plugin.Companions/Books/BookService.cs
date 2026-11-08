@@ -283,10 +283,12 @@ public sealed class BookService
 
         var books = found
             .GroupBy(b => b.ServerId + "|" + b.ExternalId)
-            .Select(g => g.First())
+            .Select(g => g.OrderByDescending(b => b.Position.HasValue).ThenByDescending(b => b.Authors.Count).ThenByDescending(b => b.Series.Count).First())
             .OrderBy(b => servers.FindIndex(s => s.Id == b.ServerId))
             .ThenBy(b => b.Kind == "audiobook" ? 1 : 0)
+            .ThenBy(b => b.Position ?? 0)
             .ThenBy(b => b.Title.Length)
+            .ThenBy(b => b.Title, StringComparer.OrdinalIgnoreCase)
             .Take(8)
             .ToList();
         return new BookResult(DateTime.UtcNow, books, errors.Distinct().ToList(), adaptation, authors);
@@ -294,10 +296,13 @@ public sealed class BookService
 
     internal static bool Fits(BookHit hit, IReadOnlyList<string> titleKeys, IReadOnlyList<string> sourceAuthors, bool titleOnlyAllowed)
     {
+        // the book series can carry the name instead of the book: "Silo" is the series of "Wool", "Shift" and "Dust"
+        var seriesFits = hit.Series.Any(s => titleKeys.Contains(TitleKeys.Key(TitleKeys.StripDecoration(s))));
+
         var byAuthor = sourceAuthors.Count > 0 && hit.Authors.Any(a => sourceAuthors.Any(s => TitleKeys.SameAuthor(a, s)));
         if (byAuthor)
         {
-            return TitleKeys.TitleFits(hit.Title, titleKeys, allowContainment: true);
+            return seriesFits || TitleKeys.TitleFits(hit.Title, titleKeys, allowContainment: true);
         }
 
         // a known source author that differs from the book's author: another book with the same title
@@ -306,6 +311,6 @@ public sealed class BookService
             return false;
         }
 
-        return titleOnlyAllowed && TitleKeys.TitleFits(hit.Title, titleKeys, allowContainment: false);
+        return titleOnlyAllowed && (seriesFits || TitleKeys.TitleFits(hit.Title, titleKeys, allowContainment: false));
     }
 }
