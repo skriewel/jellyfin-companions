@@ -227,6 +227,14 @@ public sealed class BookService
             {
                 queries.Add(main);
             }
+
+            // servers search literally: "3 Body Problem" finds neither "Three Body Problem" nor "The Three-Body
+            // Problem", "Body Problem" finds both (the exact title check comes afterwards)
+            var core = TitleKeys.CoreQuery(main);
+            if (core is not null && !queries.Contains(core, StringComparer.OrdinalIgnoreCase))
+            {
+                queries.Add(core);
+            }
         }
 
         foreach (var surname in authors.Take(2).Select(TitleKeys.Surname).Where(s => s is not null).Distinct())

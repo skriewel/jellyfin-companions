@@ -77,7 +77,7 @@ FÃ¼r jeden Buchserver gibt es folgende Einstellungen:
 
 ### Manuell
 
-1. Ordner `dist\Companions_1.0.2.0` in das Plugin-Verzeichnis von Jellyfin kopieren.
+1. Ordner `dist\Companions_1.0.3.0` in das Plugin-Verzeichnis von Jellyfin kopieren.
 2. Jellyfin neu starten, im Browser Strg+F5.
 
 ## Bauen

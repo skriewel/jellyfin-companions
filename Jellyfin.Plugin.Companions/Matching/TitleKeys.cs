@@ -214,6 +214,22 @@ public static partial class TitleKeys
         return tokens.Count > 0 && tokens[^1].Length >= 3 ? tokens[^1] : null;
     }
 
+    /// <summary>
+    /// A title without a leading article or number, for searching: "3 Body Problem" -> "Body Problem",
+    /// "The Name of the Rose" -> "Name of the Rose". Null when nothing distinctive is left.
+    /// </summary>
+    public static string? CoreQuery(string title)
+    {
+        var m = LeadingWord().Match(title.Trim());
+        if (!m.Success)
+        {
+            return null;
+        }
+
+        var rest = title.Trim()[m.Length..].Trim();
+        return rest.Length >= 6 && rest.Contains(' ', StringComparison.Ordinal) ? rest : null;
+    }
+
     /// <summary>"3 Body Problem" -> "Three Body Problem" (1 to 12 as English words).</summary>
     public static string SpellNumbers(string text)
     {
@@ -265,6 +281,9 @@ public static partial class TitleKeys
 
         return false;
     }
+
+    [GeneratedRegex(@"^(?i:the|a|an|der|die|das|le|la|les|\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eins|zwei|drei|vier)[\s\-]+")]
+    private static partial Regex LeadingWord();
 
     [GeneratedRegex(@"(?<![\w.])\d{1,2}(?![\w.])")]
     private static partial Regex StandaloneNumber();
