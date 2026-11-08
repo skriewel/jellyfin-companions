@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Companions</title>
+</head>
+<body>
+<div id="CompanionsConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox,emby-select">
+    <style>
+        #CompanionsConfigPage .cmpc-server { border: 1px solid rgba(128,128,128,.35); border-radius: 6px; padding: .8em 1em .2em; margin: 0 0 1.2em; }
+        #CompanionsConfigPage .cmpc-head { display: flex; align-items: center; gap: 1em; margin-bottom: .6em; }
+        #CompanionsConfigPage .cmpc-head h3 { margin: 0; flex: 1; font-size: 1.1em; }
+        #CompanionsConfigPage .cmpc-row { display: flex; flex-wrap: wrap; gap: 1em; align-items: center; margin-bottom: 1em; }
+        #CompanionsConfigPage .cmpc-row .emby-button { margin: 0; }
+        #CompanionsConfigPage .cmpc-ok { color: #52b54b; }
+        #CompanionsConfigPage .cmpc-err { color: #e05252; }
+        #CompanionsConfigPage .cmpc-hidden { display: none; }
+        #CompanionsConfigPage .cmpc-hint { margin: -.4em 0 1em; }
+    </style>
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="CompanionsConfigForm">
+                <div class="verticalSection">
+                    <h2 class="sectionTitle">Companions</h2>
+                    <p class="fieldDescription">Movie and series pages get a "Soundtrack" row with the matching albums from your music libraries, and a "Based on" row with the book, e-book or audiobook from your book servers. Album pages link back to the movie or series.</p>
+                </div>
+
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input id="Enabled" type="checkbox" is="emby-checkbox" />
+                        <span>Show the rows in the web client</span>
+                    </label>
+                </div>
+
+                <h3 class="sectionTitle">Soundtracks</h3>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="ShowSoundtracks" type="checkbox" is="emby-checkbox" />
+                        <span>Link soundtracks from the music libraries</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">An album counts when its name without the decoration ("(Original Motion Picture Soundtrack)", "OST", "Music from …") is the movie's title or original title, it is marked as a soundtrack by its name or a genre such as "Soundtrack", and its year fits. Albums such as Klaus Schulze's "Dune" (1979) therefore stay out.</div>
+                </div>
+
+                <h3 class="sectionTitle">Books</h3>
+                <div class="checkboxContainer">
+                    <label class="emby-checkbox-label">
+                        <input id="ShowBooks" type="checkbox" is="emby-checkbox" />
+                        <span>Link books and audiobooks from the book servers</span>
+                    </label>
+                </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="OnlyAdaptations" type="checkbox" is="emby-checkbox" />
+                        <span>Only look up adaptations</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">Adaptations have a source author in the credits (TMDB lists e.g. "Frank Herbert – Novel") or a keyword such as "based on novel or book". With a source author, a book must be by that author; without one, only an exactly equal title counts.</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="CacheHours">Keep lookups for (hours)</label>
+                    <input id="CacheHours" type="number" is="emby-input" min="1" max="720" />
+                </div>
+
+                <div id="cmpcServers"></div>
+                <div class="cmpc-row">
+                    <button is="emby-button" type="button" id="cmpcAdd" class="raised emby-button"><span>Add book server</span></button>
+                    <button is="emby-button" type="button" id="cmpcClear" class="raised emby-button"><span>Forget cached lookups</span></button>
+                </div>
+
+                <div>
+                    <button is="emby-button" type="submit" class="raised button-submit block emby-button"><span>Save</span></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <template id="cmpcServerTemplate">
+        <div class="cmpc-server">
+            <div class="cmpc-head">
+                <h3 class="cmpc-title">Book server</h3>
+                <label class="emby-checkbox-label"><input type="checkbox" is="emby-checkbox" data-f="Enabled" /><span>Active</span></label>
+            </div>
+            <div class="selectContainer">
+                <label class="selectLabel">Kind</label>
+                <select is="emby-select" data-f="Kind">
+                    <option value="Audiobookshelf">Audiobookshelf</option>
+                    <option value="Kavita">Kavita</option>
+                    <option value="Grimmory">Grimmory (formerly BookLore)</option>
+                    <option value="BookOrbit">BookOrbit</option>
+                    <option value="Opds">Other OPDS catalog</option>
+                </select>
+            </div>
+            <div class="inputContainer">
+                <label class="inputLabel inputLabelUnfocused">Name shown to users</label>
+                <input type="text" is="emby-input" data-f="Name" />
+                <div class="fieldDescription">Empty: the kind, e.g. "Kavita".</div>
+            </div>
+            <div class="inputContainer">
+                <label class="inputLabel inputLabelUnfocused">Address used by the Jellyfin server</label>
+                <input type="url" is="emby-input" data-f="Url" placeholder="http://192.168.1.10:13378" />
+            </div>
+            <div class="inputContainer">
+                <label class="inputLabel inputLabelUnfocused">Address for links in the browser</label>
+                <input type="url" is="emby-input" data-f="PublicUrl" placeholder="https://books.example.com" />
+                <div class="fieldDescription">Empty: the same address. Fill in when the browser reaches the server under another name, e.g. behind a reverse proxy.</div>
+            </div>
+            <div class="inputContainer cmpc-key">
+                <label class="inputLabel inputLabelUnfocused cmpc-key-label">API key</label>
+                <input type="password" is="emby-input" data-f="ApiKey" autocomplete="off" />
+                <div class="fieldDescription cmpc-key-hint"></div>
+            </div>
+            <div class="cmpc-opds">
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused">OPDS user</label>
+                    <input type="text" is="emby-input" data-f="Username" autocomplete="off" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused">OPDS password</label>
+                    <input type="password" is="emby-input" data-f="Password" autocomplete="new-password" />
+                    <div class="fieldDescription cmpc-opds-hint"></div>
+                </div>
+            </div>
+            <div class="cmpc-generic">
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused">OPDS catalog path</label>
+                    <input type="text" is="emby-input" data-f="OpdsPath" placeholder="/opds" />
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused">Web page of a book</label>
+                    <input type="text" is="emby-input" data-f="LinkTemplate" placeholder="/book/{id}" />
+                    <div class="fieldDescription">{id} is replaced by the book id from the catalog. Empty: no link.</div>
+                </div>
+            </div>
+            <div class="cmpc-row">
+                <button is="emby-button" type="button" class="raised emby-button cmpc-test"><span>Test connection</span></button>
+                <button is="emby-button" type="button" class="raised emby-button cmpc-remove"><span>Remove</span></button>
+                <span class="cmpc-result"></span>
+            </div>
+        </div>
+    </template>
+
+    <script type="text/javascript">
+        (function () {
+            var pluginId = '5d0a3a1e-2e48-4358-b9a5-5942845aedb4';
+            var page = document.querySelector('#CompanionsConfigPage');
+            var bools = ['Enabled', 'ShowSoundtracks', 'ShowBooks', 'OnlyAdaptations'];
+            var numbers = ['CacheHours'];
+            var fields = ['Kind', 'Name', 'Url', 'PublicUrl', 'ApiKey', 'Username', 'Password', 'OpdsPath', 'LinkTemplate'];
+            var hints = {
+                Audiobookshelf: { key: 'API token', hint: 'Audiobookshelf 2.26 or newer: Settings → API Keys (or Users → your user → API token). A user that can see the book libraries is enough.' },
+                Kavita: { key: 'Auth key', hint: 'Kavita: your account → Settings → Auth Keys (or the API key on older versions).' },
+                Grimmory: { opds: 'Grimmory: enable OPDS in the settings and create an OPDS user there. Catalog /api/v1/opds, book pages /book/{id}.' },
+                BookOrbit: { opds: 'BookOrbit: enable OPDS in the settings and create an OPDS user there. Catalog /api/v1/opds, book pages /book/{id}.' },
+                Opds: { opds: 'Any OPDS 1.2 catalog with search (OpenSearch). Leave the user empty if the catalog needs no login.' }
+            };
+
+            function newId() {
+                var a = new Uint8Array(16);
+                (window.crypto || window.msCrypto).getRandomValues(a);
+                return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+            }
+
+            function updateKind(box) {
+                var kind = box.querySelector('[data-f=Kind]').value;
+                var h = hints[kind] || {};
+                var isKey = kind === 'Audiobookshelf' || kind === 'Kavita';
+                box.querySelector('.cmpc-key').classList.toggle('cmpc-hidden', !isKey);
+                box.querySelector('.cmpc-opds').classList.toggle('cmpc-hidden', isKey);
+                box.querySelector('.cmpc-generic').classList.toggle('cmpc-hidden', kind !== 'Opds');
+                box.querySelector('.cmpc-key-label').textContent = h.key || 'API key';
+                box.querySelector('.cmpc-key-hint').textContent = h.hint || '';
+                box.querySelector('.cmpc-opds-hint').textContent = h.opds || '';
+                var name = box.querySelector('[data-f=Name]').value;
+                box.querySelector('.cmpc-title').textContent = name || box.querySelector('[data-f=Kind]').selectedOptions[0].textContent;
+            }
+
+            function addServer(s) {
+                s = s || { Id: newId(), Enabled: true, Kind: 'Audiobookshelf' };
+                var box = page.querySelector('#cmpcServerTemplate').content.firstElementChild.cloneNode(true);
+                box.setAttribute('data-id', s.Id || newId());
+                box.querySelector('[data-f=Enabled]').checked = s.Enabled !== false;
+                fields.forEach(function (f) { box.querySelector('[data-f=' + f + ']').value = s[f] || (f === 'Kind' ? 'Audiobookshelf' : ''); });
+                box.querySelector('[data-f=Kind]').addEventListener('change', function () { updateKind(box); });
+                box.querySelector('[data-f=Name]').addEventListener('input', function () { updateKind(box); });
+                box.querySelector('.cmpc-remove').addEventListener('click', function () { box.remove(); });
+                box.querySelector('.cmpc-test').addEventListener('click', function () { test(box); });
+                page.querySelector('#cmpcServers').appendChild(box);
+                updateKind(box);
+                return box;
+            }
+
+            function readServer(box) {
+                var s = { Id: box.getAttribute('data-id'), Enabled: box.querySelector('[data-f=Enabled]').checked };
+                fields.forEach(function (f) { s[f] = box.querySelector('[data-f=' + f + ']').value.trim(); });
+                return s;
+            }
+
+            function test(box) {
+                var out = box.querySelector('.cmpc-result');
+                out.textContent = '…';
+                out.className = 'cmpc-result';
+                ApiClient.ajax({
+                    type: 'POST',
+                    url: ApiClient.getUrl('Companions/TestServer'),
+                    data: JSON.stringify(readServer(box)),
+                    contentType: 'application/json',
+                    dataType: 'json'
+                }).then(function (r) {
+                    out.textContent = (r.ok ? 'Works – ' : '') + r.message;
+                    out.className = 'cmpc-result ' + (r.ok ? 'cmpc-ok' : 'cmpc-err');
+                }).catch(function () {
+                    out.textContent = 'Test failed.';
+                    out.className = 'cmpc-result cmpc-err';
+                });
+            }
+
+            page.querySelector('#cmpcAdd').addEventListener('click', function () {
+                var box = addServer();
+                box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+
+            page.querySelector('#cmpcClear').addEventListener('click', function () {
+                ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('Companions/ClearCache') }).then(function () {
+                    Dashboard.alert('Cached lookups forgotten.');
+                });
+            });
+
+            page.addEventListener('pageshow', function () {
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    bools.forEach(function (k) { page.querySelector('#' + k).checked = !!config[k]; });
+                    numbers.forEach(function (k) { page.querySelector('#' + k).value = config[k]; });
+                    page.querySelector('#cmpcServers').innerHTML = '';
+                    (config.BookServers || []).forEach(addServer);
+                }).finally(function () { Dashboard.hideLoadingMsg(); });
+            });
+
+            page.querySelector('#CompanionsConfigForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    bools.forEach(function (k) { config[k] = page.querySelector('#' + k).checked; });
+                    numbers.forEach(function (k) { config[k] = parseInt(page.querySelector('#' + k).value, 10) || 12; });
+                    config.BookServers = Array.prototype.map.call(page.querySelectorAll('.cmpc-server'), readServer)
+                        .filter(function (s) { return s.Url; });
+                    return ApiClient.updatePluginConfiguration(pluginId, config);
+                }).then(function (result) {
+                    Dashboard.processPluginConfigurationUpdateResult(result);
+                }).finally(function () { Dashboard.hideLoadingMsg(); });
+                return false;
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

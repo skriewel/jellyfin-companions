@@ -1,0 +1,39 @@
+/* Book cards: plain links that look like jellyfin-web cards. */
+.cmp-book-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+.cmp-book-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+.cmp-cover {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(128, 128, 128, .18);
+    overflow: hidden;
+}
+.cmp-cover-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.cmp-badge {
+    position: absolute;
+    right: .35em;
+    bottom: .35em;
+    padding: .2em;
+    font-size: 1.1em !important;
+    color: #fff;
+    background: rgba(0, 0, 0, .6);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.cmp-book .cardText-secondary { opacity: .75; }
