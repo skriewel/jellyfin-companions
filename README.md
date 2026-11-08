@@ -34,7 +34,7 @@ Jellyfin übernimmt von TMDB die Vorlage samt Autor in die Mitwirkenden, z. B. �
 - **Ohne Vorlagen-Autor:** Nur ein exakt gleicher Titel zählt.
 - **Buchreihe:** Statt des Titels darf auch der Name der Buchreihe passen. *Silo* findet so „Wool“, „Shift“ und „Dust“ aus der Reihe „Silo“, in Reihenfolge. Audiobookshelf, Grimmory und BookOrbit liefern den Reihennamen mit. In Kavita ist eine Reihe ohnehin ein einziger Eintrag.
 - **Titel in anderen Sprachen:** Jellyfin kennt nur den Titel in der Sprache der Bibliothek und den Originaltitel. Bücher und Manga liegen aber oft unter dem englischen Titel oder dem der deutschen Ausgabe auf dem Server. Das Plugin fragt diese Titel einmal pro Titel über Jellyfins eigenen TMDB-Anbieter ab (kein eigener API-Schlüssel, Standard: `en, de`) und sucht auch damit. *Atelier of Witch Hat* findet so „Witch Hat Atelier“ und umgekehrt. Abschaltbar.
-- **Bände:** Bandnummern zählen beim Titelvergleich nicht („Witch Hat Atelier, Vol. 3“, „Atelier of Witch Hat 2“). Mehr als vier Bände einer Reihe auf einem Server erscheinen als eine Karte mit der Zahl der Bände.
+- **Bände:** Bandnummern zählen beim Titelvergleich nicht („Witch Hat Atelier, Vol. 3“, „Witch Hat Atelier v03 (2019) (Digital)“, „Atelier of Witch Hat 2“). Klammerzusätze wie „(Digital)“ erscheinen nicht auf den Karten. Mehr als vier Bände einer Reihe auf einem Server erscheinen als eine Karte mit der Zahl der Bände.
 - Autorennamen passen in jeder Reihenfolge („Liu Cixin“ = „Cixin Liu“), Zahlen und Zahlwörter gelten als gleich („3 Body Problem“ = „The Three-Body Problem“).
 
 Gesucht wird mit dem Titel, dem Originaltitel, deren Haupttitel und dem Nachnamen des Autors. Die Ergebnisse speichert das Plugin 12 Stunden zwischen (einstellbar). Fehlgeschlagene Abfragen wiederholt es nach 10 Minuten. Die Cover lädt der Jellyfin-Server mit den Zugangsdaten des Buchservers und reicht sie weiter. Der Browser braucht also keinen Zugang zu den Buchservern, nur für die Links.
@@ -82,7 +82,7 @@ Für jeden Buchserver gibt es folgende Einstellungen:
 
 ### Manuell
 
-1. Ordner `dist\Companions_1.0.6.0` in das Plugin-Verzeichnis von Jellyfin kopieren.
+1. Ordner `dist\Companions_1.0.7.0` in das Plugin-Verzeichnis von Jellyfin kopieren.
 2. Jellyfin neu starten, im Browser Strg+F5.
 
 ## Bauen

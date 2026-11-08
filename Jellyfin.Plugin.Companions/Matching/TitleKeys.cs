@@ -236,6 +236,21 @@ public static partial class TitleKeys
         return rest.Length >= 6 && rest.Contains(' ', StringComparison.Ordinal) ? rest : null;
     }
 
+    /// <summary>A title for display: without bracketed release notes ("Witch Hat Atelier v03 (2019) (Digital)" -> "Witch Hat Atelier v03").</summary>
+    public static string Display(string? title)
+    {
+        var s = MultiSpace().Replace(Bracketed().Replace(title ?? string.Empty, " "), " ").Trim();
+        return s.Length > 0 ? s : (title ?? string.Empty).Trim();
+    }
+
+    /// <summary>The series part of a volume title as written ("Witch Hat Atelier v03 (2019)" -> "Witch Hat Atelier"), or null.</summary>
+    public static string? VolumeBaseText(string? title)
+    {
+        var s = StripDecoration(title);
+        var m = VolumeSuffix().Match(s);
+        return m.Success && m.Index > 0 ? s[..m.Index].Trim().TrimEnd(',', ':', '-', '–', '—').Trim() : null;
+    }
+
     /// <summary>The key of a title without a trailing volume number ("Witch Hat Atelier, Vol. 3" -> "witch hat atelier"), or null.</summary>
     public static string? VolumeBase(string? title)
     {
@@ -305,7 +320,8 @@ public static partial class TitleKeys
     [GeneratedRegex(@"^(?i:the|a|an|der|die|das|le|la|les|\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eins|zwei|drei|vier)[\s\-]+")]
     private static partial Regex LeadingWord();
 
-    [GeneratedRegex(@"(?i)(?:\s*[,:\-–—]?\s*\b(?:vol(?:ume)?|band|bd|tome|t|book|teil|part|nr|no)\b\.?\s*|\s+#?\s*|\s*,\s*)\d{1,3}\s*$")]
+    // "Vol. 3", "Volume 3", "Vol3", "v03" (scanlation and digital releases), "Band 2", "Bd. 2", "#3", ", 3", " 3"
+    [GeneratedRegex(@"(?i)(?:\s*[,:\-–—]?\s*\b(?:vol(?:ume)?|v|band|bd|tome|t|book|teil|part|nr|no)(?![a-z])\.?\s*|\s+#?\s*|\s*,\s*)\d{1,3}\s*$")]
     private static partial Regex VolumeSuffix();
 
     [GeneratedRegex(@"(?<![\w.])\d{1,2}(?![\w.])")]
@@ -316,6 +332,9 @@ public static partial class TitleKeys
 
     [GeneratedRegex(@"[\(\[\{][^\)\]\}]*[\)\]\}]")]
     private static partial Regex Bracketed();
+
+    [GeneratedRegex(@"\s{2,}")]
+    private static partial Regex MultiSpace();
 
     [GeneratedRegex(@"(?i)\s*[:\-–—]\s*(?:a\s+novel|roman|ein\s+roman|novel|unabridged|ungekürzt)\s*$")]
     private static partial Regex NovelSuffix();

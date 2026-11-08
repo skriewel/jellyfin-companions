@@ -380,7 +380,11 @@ public sealed class BookService
             {
                 var all = groups[key];
                 var first = all.OrderBy(x => x.Position ?? double.MaxValue).ThenBy(x => x.Title, StringComparer.OrdinalIgnoreCase).First();
-                yield return first with { Volumes = all.Count };
+                // the card stands for the series: "Witch Hat Atelier", not "Witch Hat Atelier v01 (2019) (Digital)"
+                var name = first.Series.FirstOrDefault(s => titleKeys.Contains(TitleKeys.Key(TitleKeys.StripDecoration(s))))
+                    ?? TitleKeys.VolumeBaseText(first.Title)
+                    ?? first.Title;
+                yield return first with { Volumes = all.Count, Title = name };
             }
         }
     }

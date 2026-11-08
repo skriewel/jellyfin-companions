@@ -115,7 +115,7 @@ public class CompanionsController : ControllerBase
                     server = string.IsNullOrWhiteSpace(server?.Name) ? server?.Kind : server!.Name,
                     serverKind = server?.Kind,
                     kind = b.Kind,
-                    title = b.Title,
+                    title = Matching.TitleKeys.Display(b.Title),
                     authors = b.Authors,
                     volumes = b.Volumes,
                     url = b.Url,

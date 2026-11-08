@@ -1,6 +1,6 @@
 # Builds the plugin and packs a ready-to-install folder + zip into .\dist
 param(
-    [string]$Version = "1.0.6.0"
+    [string]$Version = "1.0.7.0"
 )
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
@@ -24,7 +24,7 @@ Copy-Item (Join-Path $root "images\logo.png") $folder
 
 $meta = [ordered]@{
     category    = "General"
-    changelog   = "Books: titles are looked up in several languages (default en, de) so German editions are found too; Explain lists the search words and the books a server found that were not linked, with the reason."
+    changelog   = "Books: volume numbers written as v03 or Vol3 are recognised (e.g. Witch Hat Atelier v03 (2019) (Digital)), so such volumes match their series."
     description = "Links movies and series to their soundtrack in your music library and to the book or audiobook in Audiobookshelf, Kavita, Grimmory or BookOrbit."
     guid        = "5d0a3a1e-2e48-4358-b9a5-5942845aedb4"
     name        = "Companions"
