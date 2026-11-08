@@ -117,6 +117,7 @@ public class CompanionsController : ControllerBase
                     kind = b.Kind,
                     title = b.Title,
                     authors = b.Authors,
+                    volumes = b.Volumes,
                     url = b.Url,
                     cover = b.CoverUrl is null ? null : $"Companions/Cover/{b.ServerId}/{Uri.EscapeDataString(b.ExternalId)}"
                 };
@@ -238,6 +239,7 @@ public class CompanionsController : ControllerBase
             name = item.Name,
             originalTitle = item.OriginalTitle,
             sourceAuthors = authors,
+            englishTitle = result?.EnglishTitle,
             adaptation = BookService.IsAdaptation(item, authors),
             tags = item.Tags.Where(t => t.StartsWith("based on", StringComparison.OrdinalIgnoreCase)),
             soundtracks = item is MusicAlbum a ? _soundtracks.TitlesFor(a) : _soundtracks.AlbumsFor(item),

@@ -1,6 +1,6 @@
 # Builds the plugin and packs a ready-to-install folder + zip into .\dist
 param(
-    [string]$Version = "1.0.4.0"
+    [string]$Version = "1.0.5.0"
 )
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
@@ -24,7 +24,7 @@ Copy-Item (Join-Path $root "images\logo.png") $folder
 
 $meta = [ordered]@{
     category    = "General"
-    changelog   = "Books: a book also matches through its book series (Silo -> Wool, Shift, Dust) in Audiobookshelf, Grimmory and BookOrbit; books of a series are listed in series order."
+    changelog   = "Books: the English title is looked up through Jellyfin's TMDB provider and searched too (Atelier of Witch Hat -> Witch Hat Atelier); volume numbers are ignored when comparing titles; more than four volumes of one series on one server are shown as one card with the number of volumes."
     description = "Links movies and series to their soundtrack in your music library and to the book or audiobook in Audiobookshelf, Kavita, Grimmory or BookOrbit."
     guid        = "5d0a3a1e-2e48-4358-b9a5-5942845aedb4"
     name        = "Companions"

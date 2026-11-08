@@ -19,6 +19,12 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public bool OnlyAdaptations { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the English title is looked up through Jellyfin's TMDB provider
+    /// and searched as well (books and manga are often on the server under it).
+    /// </summary>
+    public bool UseEnglishTitle { get; set; } = true;
+
     /// <summary>Gets or sets how long book lookups are cached, in hours.</summary>
     public int CacheHours { get; set; } = 12;
 

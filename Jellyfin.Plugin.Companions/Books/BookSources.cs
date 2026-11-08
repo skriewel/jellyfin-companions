@@ -24,6 +24,9 @@ public sealed record BookHit(
     /// <summary>Gets the position in its series (1 for "Wool"), for sorting.</summary>
     public double? Position { get; init; }
 
+    /// <summary>Gets the number of volumes this entry stands for when many volumes of a series were combined.</summary>
+    public int? Volumes { get; init; }
+
     /// <summary>"Silo #1" -> ("Silo", 1); "Silo" -> ("Silo", null).</summary>
     public static (string Name, double? Position) SplitSeries(string text)
     {

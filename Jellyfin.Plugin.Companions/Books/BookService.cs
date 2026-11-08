@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.Companions.Books;
 
 /// <summary>The books found for a title, and the servers that could not be asked.</summary>
-public sealed record BookResult(DateTime FetchedAt, IReadOnlyList<BookHit> Books, IReadOnlyList<string> Errors, bool Adaptation, IReadOnlyList<string> SourceAuthors);
+public sealed record BookResult(DateTime FetchedAt, IReadOnlyList<BookHit> Books, IReadOnlyList<string> Errors, bool Adaptation, IReadOnlyList<string> SourceAuthors, string? EnglishTitle = null);
 
 /// <summary>
 /// Finds the book (or audiobook, or comic) a movie or series is based on, on the configured book servers.
@@ -38,12 +38,14 @@ public sealed class BookService
     private readonly ILibraryManager _library;
     private readonly IHttpClientFactory _http;
     private readonly ILogger<BookService> _logger;
+    private readonly EnglishTitles _english;
     private readonly ConcurrentDictionary<Guid, BookResult> _cache = new();
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _locks = new();
     private readonly ConcurrentDictionary<string, BookSource> _sources = new();
 
-    public BookService(ILibraryManager library, IHttpClientFactory http, ILogger<BookService> logger)
+    public BookService(ILibraryManager library, IHttpClientFactory http, EnglishTitles english, ILogger<BookService> logger)
     {
+        _english = english;
         _library = library;
         _http = http;
         _logger = logger;
@@ -217,9 +219,13 @@ public sealed class BookService
             return new BookResult(DateTime.UtcNow, Array.Empty<BookHit>(), Array.Empty<string>(), adaptation, authors);
         }
 
-        var variants = TitleKeys.TitleVariants(title.Name, title.OriginalTitle);
+        // the English title too: manga and novels are often on the server under it ("Witch Hat Atelier"),
+        // while Jellyfin only knows the localised and the original title ("Atelier of Witch Hat" and the Japanese one)
+        var english = cfg.UseEnglishTitle ? await _english.GetAsync(title, ct).ConfigureAwait(false) : null;
+        var titles = new[] { title.Name, title.OriginalTitle, english };
+        var variants = TitleKeys.TitleVariants(titles);
         var queries = new List<string>();
-        foreach (var t in new[] { title.Name, title.OriginalTitle }.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var t in titles.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             queries.Add(t!);
             var main = TitleKeys.StripDecoration(t!.Split(new[] { ": ", " - ", " – " }, 2, StringSplitOptions.None)[0]);
@@ -289,9 +295,43 @@ public sealed class BookService
             .ThenBy(b => b.Position ?? 0)
             .ThenBy(b => b.Title.Length)
             .ThenBy(b => b.Title, StringComparer.OrdinalIgnoreCase)
-            .Take(8)
             .ToList();
-        return new BookResult(DateTime.UtcNow, books, errors.Distinct().ToList(), adaptation, authors);
+        books = CollapseVolumes(books, variants).Take(8).ToList();
+        return new BookResult(DateTime.UtcNow, books, errors.Distinct().ToList(), adaptation, authors, english);
+    }
+
+    /// <summary>
+    /// Many volumes of one series on one server (a manga with 14 volumes) become one card: the first volume,
+    /// with the number of volumes. A handful of books (a trilogy) stay separate.
+    /// </summary>
+    private static IEnumerable<BookHit> CollapseVolumes(List<BookHit> books, IReadOnlyList<string> titleKeys)
+    {
+        const int MaxSeparate = 4;
+        string GroupKey(BookHit b)
+        {
+            var series = b.Series.Select(s => TitleKeys.Key(TitleKeys.StripDecoration(s))).FirstOrDefault(k => titleKeys.Contains(k));
+            series ??= TitleKeys.VolumeBase(b.Title) is { } vb && titleKeys.Contains(vb) ? vb : null;
+            return series is null ? string.Empty : b.ServerId + "|" + b.Kind + "|" + series;
+        }
+
+        var groups = books.GroupBy(GroupKey).ToDictionary(g => g.Key, g => g.ToList());
+        var emitted = new HashSet<string>();
+        foreach (var b in books)
+        {
+            var key = GroupKey(b);
+            if (key.Length == 0 || groups[key].Count <= MaxSeparate)
+            {
+                yield return b;
+                continue;
+            }
+
+            if (emitted.Add(key))
+            {
+                var all = groups[key];
+                var first = all.OrderBy(x => x.Position ?? double.MaxValue).ThenBy(x => x.Title, StringComparer.OrdinalIgnoreCase).First();
+                yield return first with { Volumes = all.Count };
+            }
+        }
     }
 
     internal static bool Fits(BookHit hit, IReadOnlyList<string> titleKeys, IReadOnlyList<string> sourceAuthors, bool titleOnlyAllowed)

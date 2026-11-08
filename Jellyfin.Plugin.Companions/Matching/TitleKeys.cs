@@ -138,6 +138,12 @@ public static partial class TitleKeys
             bookKeys.Add(Key(m.Groups[1].Value));
         }
 
+        // a volume of a series: "Witch Hat Atelier, Vol. 1", "Witch Hat Atelier 3", "Atelier of Witch Hat, Band 2"
+        if (VolumeBase(stripped) is { } vb)
+        {
+            bookKeys.Add(vb);
+        }
+
         foreach (var key in titleKeys)
         {
             if (bookKeys.Contains(key))
@@ -230,6 +236,20 @@ public static partial class TitleKeys
         return rest.Length >= 6 && rest.Contains(' ', StringComparison.Ordinal) ? rest : null;
     }
 
+    /// <summary>The key of a title without a trailing volume number ("Witch Hat Atelier, Vol. 3" -> "witch hat atelier"), or null.</summary>
+    public static string? VolumeBase(string? title)
+    {
+        var s = StripDecoration(title);
+        var m = VolumeSuffix().Match(s);
+        if (!m.Success || m.Index == 0)
+        {
+            return null;
+        }
+
+        var key = Key(s[..m.Index]);
+        return key.Length >= 3 ? key : null;
+    }
+
     /// <summary>"3 Body Problem" -> "Three Body Problem" (1 to 12 as English words).</summary>
     public static string SpellNumbers(string text)
     {
@@ -284,6 +304,9 @@ public static partial class TitleKeys
 
     [GeneratedRegex(@"^(?i:the|a|an|der|die|das|le|la|les|\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eins|zwei|drei|vier)[\s\-]+")]
     private static partial Regex LeadingWord();
+
+    [GeneratedRegex(@"(?i)(?:\s*[,:\-–—]?\s*\b(?:vol(?:ume)?|band|bd|tome|t|book|teil|part|nr|no)\b\.?\s*|\s+#?\s*|\s*,\s*)\d{1,3}\s*$")]
+    private static partial Regex VolumeSuffix();
 
     [GeneratedRegex(@"(?<![\w.])\d{1,2}(?![\w.])")]
     private static partial Regex StandaloneNumber();

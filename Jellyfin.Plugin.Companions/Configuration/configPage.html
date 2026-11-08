@@ -55,6 +55,13 @@
                     </label>
                     <div class="fieldDescription checkboxFieldDescription">Adaptations have a source author in the credits (TMDB lists e.g. "Frank Herbert – Novel") or a keyword such as "based on novel or book". With a source author, a book must be by that author; without one, only an exactly equal title counts.</div>
                 </div>
+                <div class="checkboxContainer checkboxContainer-withDescription">
+                    <label class="emby-checkbox-label">
+                        <input id="UseEnglishTitle" type="checkbox" is="emby-checkbox" />
+                        <span>Also search the English title</span>
+                    </label>
+                    <div class="fieldDescription checkboxFieldDescription">Jellyfin keeps only the title in your library's language and the original title. Books and manga are often on the server under the English title ("Witch Hat Atelier" for "Atelier of Witch Hat"). It is looked up once per title through Jellyfin's own TMDB provider.</div>
+                </div>
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="CacheHours">Keep lookups for (hours)</label>
                     <input id="CacheHours" type="number" is="emby-input" min="1" max="720" />
@@ -142,7 +149,7 @@
         (function () {
             var pluginId = '5d0a3a1e-2e48-4358-b9a5-5942845aedb4';
             var page = document.querySelector('#CompanionsConfigPage');
-            var bools = ['Enabled', 'ShowSoundtracks', 'ShowBooks', 'OnlyAdaptations'];
+            var bools = ['Enabled', 'ShowSoundtracks', 'ShowBooks', 'OnlyAdaptations', 'UseEnglishTitle'];
             var numbers = ['CacheHours'];
             var fields = ['Kind', 'Name', 'Url', 'PublicUrl', 'ApiKey', 'Username', 'Password', 'OpdsPath', 'LinkTemplate'];
             var hints = {

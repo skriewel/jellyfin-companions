@@ -14,14 +14,14 @@
     var de = /^de\b/i.test(document.documentElement.lang || navigator.language || '');
     var T = de ? {
         soundtrack: 'Soundtrack', soundtracks: 'Soundtracks', seriesSoundtrack: 'Soundtrack zur Serie',
-        book: 'Buchvorlage', books: 'Bücher zum Film', seriesBook: 'Buchvorlage der Serie',
+        book: 'Buchvorlage', books: 'Bücher zum Film', seriesBooks: 'Bücher zur Serie', seriesBook: 'Buchvorlage der Serie',
         movie: 'Zum Film', series: 'Zur Serie', titles: 'Filme und Serien',
-        ebook: 'E-Book', audiobook: 'Hörbuch', comic: 'Comic', open: 'Öffnen in'
+        ebook: 'E-Book', audiobook: 'Hörbuch', comic: 'Comic', open: 'Öffnen in', volumes: function (n) { return n + ' Bände'; }
     } : {
         soundtrack: 'Soundtrack', soundtracks: 'Soundtracks', seriesSoundtrack: 'Soundtrack of the series',
-        book: 'Based on', books: 'Books', seriesBook: 'The series is based on',
+        book: 'Based on', books: 'Books', seriesBooks: 'Books', seriesBook: 'The series is based on',
         movie: 'The movie', series: 'The show', titles: 'Movies and shows',
-        ebook: 'E-book', audiobook: 'Audiobook', comic: 'Comic', open: 'Open in'
+        ebook: 'E-book', audiobook: 'Audiobook', comic: 'Comic', open: 'Open in', volumes: function (n) { return n + ' volumes'; }
     };
 
     var cache = {};      // itemId -> Promise<data>
@@ -110,7 +110,7 @@
         var img = b.cover ? c.getUrl(b.cover) : '';
         var icon = b.kind === 'audiobook' ? 'headphones' : b.kind === 'comic' ? 'auto_stories' : 'menu_book';
         var kind = T[b.kind] || T.ebook;
-        var where = b.server ? kind + ' · ' + b.server : kind;
+        var where = (b.volumes ? T.volumes(b.volumes) + ' · ' : '') + (b.server ? kind + ' · ' + b.server : kind);
         var label = b.title + (b.authors && b.authors.length ? ' – ' + b.authors.join(', ') : '') + ' (' + T.open + ' ' + (b.server || '') + ')';
         var tagOpen = b.url ? '<a href="' + esc(b.url) + '" target="_blank" rel="noopener noreferrer"' : '<div';
         var tagClose = b.url ? '</a>' : '</div>';
@@ -203,7 +203,9 @@
                         html += sectionHtml(st, albums.map(function (a) { return itemCard(a, 'overflowSquare'); }).join(''), 'soundtrack');
                     }
                     if (d.books && d.books.length) {
-                        var bt = parent ? T.seriesBook : (d.books.length > 1 ? T.books : T.book);
+                        var bt = parent || d.kind === 'series'
+                            ? (d.books.length > 1 ? T.seriesBooks : T.seriesBook)
+                            : (d.books.length > 1 ? T.books : T.book);
                         html += sectionHtml(bt, d.books.map(bookCard).join(''), 'books');
                     }
                     if (html) insertSections(page, html, id);

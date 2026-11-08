@@ -14,6 +14,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     {
         serviceCollection.AddSingleton<IStartupFilter, ScriptInjectionStartupFilter>();
         serviceCollection.AddSingleton<SoundtrackIndex>();
+        serviceCollection.AddSingleton<EnglishTitles>();
         serviceCollection.AddSingleton<BookService>();
     }
 }

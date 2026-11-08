@@ -33,6 +33,8 @@ Jellyfin übernimmt von TMDB die Vorlage samt Autor in die Mitwirkenden, z. B. �
 - **Mit Vorlagen-Autor:** Das Buch muss von diesem Autor sein. „J. R. R. Tolkien“, „J.R.R. Tolkien“ und „Tolkien, J. R. R.“ gelten als gleich. Der Titel muss passen: gleich, gleich bis auf einen Untertitel („Dune: Der Wüstenplanet“), oder Teil des Filmtitels („Die Gefährten“ in „Der Herr der Ringe – Die Gefährten“). „Dune Messiah“ gehört deshalb nicht zu *Dune*, und ein „Dune“ von einem anderen Autor auch nicht.
 - **Ohne Vorlagen-Autor:** Nur ein exakt gleicher Titel zählt.
 - **Buchreihe:** Statt des Titels darf auch der Name der Buchreihe passen. *Silo* findet so „Wool“, „Shift“ und „Dust“ aus der Reihe „Silo“, in Reihenfolge. Audiobookshelf, Grimmory und BookOrbit liefern den Reihennamen mit. In Kavita ist eine Reihe ohnehin ein einziger Eintrag.
+- **Englischer Titel:** Jellyfin kennt nur den Titel in der Sprache der Bibliothek und den Originaltitel. Bücher und Manga liegen aber oft unter dem englischen Titel auf dem Server. Das Plugin fragt ihn deshalb einmal pro Titel über Jellyfins eigenen TMDB-Anbieter ab (kein eigener API-Schlüssel) und sucht auch damit: *Atelier of Witch Hat* findet so „Witch Hat Atelier“. Abschaltbar.
+- **Bände:** Bandnummern zählen beim Titelvergleich nicht („Witch Hat Atelier, Vol. 3“, „Atelier of Witch Hat 2“). Mehr als vier Bände einer Reihe auf einem Server erscheinen als eine Karte mit der Zahl der Bände.
 - Autorennamen passen in jeder Reihenfolge („Liu Cixin“ = „Cixin Liu“), Zahlen und Zahlwörter gelten als gleich („3 Body Problem“ = „The Three-Body Problem“).
 
 Gesucht wird mit dem Titel, dem Originaltitel, deren Haupttitel und dem Nachnamen des Autors. Die Ergebnisse speichert das Plugin 12 Stunden zwischen (einstellbar). Fehlgeschlagene Abfragen wiederholt es nach 10 Minuten. Die Cover lädt der Jellyfin-Server mit den Zugangsdaten des Buchservers und reicht sie weiter. Der Browser braucht also keinen Zugang zu den Buchservern, nur für die Links.
@@ -47,6 +49,7 @@ Gesucht wird mit dem Titel, dem Originaltitel, deren Haupttitel und dem Nachname
 | Link soundtracks … | an | Soundtrack-Zeile und „Zum Film“ auf Albumseiten |
 | Link books and audiobooks … | an | Buch-Zeile |
 | Only look up adaptations | an | Buchserver nur bei Verfilmungen fragen |
+| Also search the English title | an | englischen Titel über Jellyfins TMDB-Anbieter nachschlagen und mitsuchen |
 | Keep lookups for (hours) | 12 | Zwischenspeicher für Buchabfragen |
 
 Für jeden Buchserver gibt es folgende Einstellungen:
@@ -79,7 +82,7 @@ Für jeden Buchserver gibt es folgende Einstellungen:
 
 ### Manuell
 
-1. Ordner `dist\Companions_1.0.4.0` in das Plugin-Verzeichnis von Jellyfin kopieren.
+1. Ordner `dist\Companions_1.0.5.0` in das Plugin-Verzeichnis von Jellyfin kopieren.
 2. Jellyfin neu starten, im Browser Strg+F5.
 
 ## Bauen
