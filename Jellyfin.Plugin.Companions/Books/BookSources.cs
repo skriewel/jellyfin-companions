@@ -204,7 +204,7 @@ public sealed class AudiobookshelfSource : BookSource
             foreach (var author in Arr(json, "authors"))
             {
                 if (Str(author, "id") is { Length: > 0 } aid
-                    && (Matching.TitleKeys.SameAuthor(Str(author, "name"), query) || Matching.TitleKeys.Surname(Str(author, "name")) == Matching.TitleKeys.Key(query)))
+                    && (Matching.TitleKeys.SameAuthor(Str(author, "name"), query) || Matching.TitleKeys.NameHasWord(Str(author, "name"), query)))
                 {
                     authorIds.Add(aid);
                 }

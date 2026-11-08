@@ -182,7 +182,7 @@ public sealed class BookService
         }
 
         var detail = string.Join("; ", details);
-        _logger.LogWarning("Companions: no cover for \"{Title}\": {Detail}", hit.Title, detail);
+        _logger.LogWarning("Companions: no cover for {Title}: {Detail}", hit.Title, detail);
         return (null, null, detail);
     }
 
@@ -232,6 +232,16 @@ public sealed class BookService
         foreach (var surname in authors.Take(2).Select(TitleKeys.Surname).Where(s => s is not null).Distinct())
         {
             queries.Add(surname!);
+        }
+
+        // titles with a number are also asked with the number as a word: servers search literally ("3 Body Problem" -> "Three Body Problem")
+        foreach (var q in queries.ToList())
+        {
+            var spelled = TitleKeys.SpellNumbers(q);
+            if (spelled != q && !queries.Contains(spelled, StringComparer.OrdinalIgnoreCase))
+            {
+                queries.Add(spelled);
+            }
         }
 
         var errors = new ConcurrentBag<string>();

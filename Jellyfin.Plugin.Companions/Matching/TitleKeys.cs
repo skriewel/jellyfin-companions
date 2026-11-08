@@ -14,7 +14,13 @@ public static partial class TitleKeys
     private static readonly Dictionary<string, string> TokenMap = new(StringComparer.Ordinal)
     {
         ["ii"] = "2", ["iii"] = "3", ["iv"] = "4", ["vi"] = "6", ["vii"] = "7", ["viii"] = "8", ["ix"] = "9",
-        ["volume"] = "vol", ["pt"] = "part", ["and"] = "&", ["und"] = "&"
+        ["volume"] = "vol", ["pt"] = "part", ["and"] = "&", ["und"] = "&",
+
+        // "3 Body Problem" == "The Three-Body Problem", "Die drei ???" == "Die 3 ???" ("elf" stays a word)
+        ["one"] = "1", ["two"] = "2", ["three"] = "3", ["four"] = "4", ["five"] = "5", ["six"] = "6", ["seven"] = "7",
+        ["eight"] = "8", ["nine"] = "9", ["ten"] = "10", ["eleven"] = "11", ["twelve"] = "12",
+        ["eins"] = "1", ["zwei"] = "2", ["drei"] = "3", ["vier"] = "4", ["funf"] = "5", ["sechs"] = "6", ["sieben"] = "7",
+        ["acht"] = "8", ["neun"] = "9", ["zehn"] = "10", ["zwolf"] = "12"
     };
 
     private static readonly HashSet<string> Articles = new(StringComparer.Ordinal)
@@ -176,6 +182,12 @@ public static partial class TitleKeys
             return true;
         }
 
+        // the same names in another order: "Liu Cixin" (family name first, as TMDB lists it) == "Cixin Liu"
+        if (ta.Count >= 2 && ta.Count == tb.Count && ta.OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(tb.OrderBy(x => x, StringComparer.Ordinal)))
+        {
+            return true;
+        }
+
         // last names must agree, and the other parts must not contradict (initials vs. full first names)
         var lastA = ta[^1];
         var lastB = tb[^1];
@@ -200,6 +212,20 @@ public static partial class TitleKeys
     {
         var tokens = NameTokens(name);
         return tokens.Count > 0 && tokens[^1].Length >= 3 ? tokens[^1] : null;
+    }
+
+    /// <summary>"3 Body Problem" -> "Three Body Problem" (1 to 12 as English words).</summary>
+    public static string SpellNumbers(string text)
+    {
+        string[] words = { "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve" };
+        return StandaloneNumber().Replace(text, m => int.TryParse(m.Value, out var n) && n >= 1 && n <= 12 ? words[n] : m.Value);
+    }
+
+    /// <summary>True if one of the words of a name is the given word ("cixin" for "Cixin Liu").</summary>
+    public static bool NameHasWord(string? name, string? word)
+    {
+        var w = Key(word);
+        return w.Length >= 3 && NameTokens(name).Contains(w);
     }
 
     private static List<string> NameTokens(string? name)
@@ -239,6 +265,9 @@ public static partial class TitleKeys
 
         return false;
     }
+
+    [GeneratedRegex(@"(?<![\w.])\d{1,2}(?![\w.])")]
+    private static partial Regex StandaloneNumber();
 
     [GeneratedRegex(@"^(.+?)\s*(?::|\s[-–—]\s)\s*(.+)$")]
     private static partial Regex SubtitleSplit();

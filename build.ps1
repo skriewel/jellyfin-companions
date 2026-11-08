@@ -1,6 +1,6 @@
 # Builds the plugin and packs a ready-to-install folder + zip into .\dist
 param(
-    [string]$Version = "1.0.1.0"
+    [string]$Version = "1.0.2.0"
 )
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
@@ -24,7 +24,7 @@ Copy-Item (Join-Path $root "images\logo.png") $folder
 
 $meta = [ordered]@{
     category    = "General"
-    changelog   = "Audiobookshelf covers: falls back to the original image when resizing fails and accepts covers without a content type; failures are logged and shown by Explain. The book row is no longer a Jellyfin item row, so other plugins do not add their cards to it."
+    changelog   = "Books: authors match in any name order (Liu Cixin = Cixin Liu), numbers match their words (3 Body Problem = The Three-Body Problem), and titles with a number are also searched with the number spelled out."
     description = "Links movies and series to their soundtrack in your music library and to the book or audiobook in Audiobookshelf, Kavita, Grimmory or BookOrbit."
     guid        = "5d0a3a1e-2e48-4358-b9a5-5942845aedb4"
     name        = "Companions"
