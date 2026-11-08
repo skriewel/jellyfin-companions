@@ -9,7 +9,20 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.Companions.Books;
 
 /// <summary>The books found for a title, and the servers that could not be asked.</summary>
-public sealed record BookResult(DateTime FetchedAt, IReadOnlyList<BookHit> Books, IReadOnlyList<string> Errors, bool Adaptation, IReadOnlyList<string> SourceAuthors, string? EnglishTitle = null);
+public sealed record BookResult(DateTime FetchedAt, IReadOnlyList<BookHit> Books, IReadOnlyList<string> Errors, bool Adaptation, IReadOnlyList<string> SourceAuthors, string? EnglishTitle = null)
+{
+    /// <summary>Gets the titles looked up in other languages.</summary>
+    public IReadOnlyList<string> ExtraTitles { get; init; } = Array.Empty<string>();
+
+    /// <summary>Gets the search words sent to the book servers.</summary>
+    public IReadOnlyList<string> Queries { get; init; } = Array.Empty<string>();
+
+    /// <summary>Gets books the servers found that did not fit, with the reason (for Explain).</summary>
+    public IReadOnlyList<RejectedBook> Rejected { get; init; } = Array.Empty<RejectedBook>();
+}
+
+/// <summary>A book a server found for a title that was not linked, and why.</summary>
+public sealed record RejectedBook(string Server, string Title, IReadOnlyList<string> Authors, IReadOnlyList<string> Series, string Reason);
 
 /// <summary>
 /// Finds the book (or audiobook, or comic) a movie or series is based on, on the configured book servers.
@@ -221,8 +234,11 @@ public sealed class BookService
 
         // the English title too: manga and novels are often on the server under it ("Witch Hat Atelier"),
         // while Jellyfin only knows the localised and the original title ("Atelier of Witch Hat" and the Japanese one)
-        var english = cfg.UseEnglishTitle ? await _english.GetAsync(title, ct).ConfigureAwait(false) : null;
-        var titles = new[] { title.Name, title.OriginalTitle, english };
+        var extra = cfg.UseEnglishTitle
+            ? await _english.GetManyAsync(title, string.IsNullOrWhiteSpace(cfg.TitleLanguages) ? "en" : cfg.TitleLanguages, ct).ConfigureAwait(false)
+            : new List<string>();
+        var english = cfg.UseEnglishTitle ? await _english.GetAsync(title, "en", ct).ConfigureAwait(false) : null;
+        var titles = new[] { title.Name, title.OriginalTitle }.Concat(extra).ToArray();
         var variants = TitleKeys.TitleVariants(titles);
         var queries = new List<string>();
         foreach (var t in titles.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.OrdinalIgnoreCase))
@@ -260,6 +276,7 @@ public sealed class BookService
 
         var errors = new ConcurrentBag<string>();
         var found = new ConcurrentBag<BookHit>();
+        var rejected = new ConcurrentDictionary<string, RejectedBook>();
         await Parallel.ForEachAsync(servers, ct, async (server, token) =>
         {
             var source = SourceFor(server);
@@ -269,9 +286,14 @@ public sealed class BookService
                 {
                     foreach (var hit in await source.SearchAsync(q, token).ConfigureAwait(false))
                     {
-                        if (Fits(hit, variants, authors, adaptation || !cfg.OnlyAdaptations))
+                        var reason = Judge(hit, variants, authors, adaptation || !cfg.OnlyAdaptations);
+                        if (reason is null)
                         {
                             found.Add(hit);
+                        }
+                        else if (rejected.Count < 40)
+                        {
+                            rejected.TryAdd(hit.ServerId + "|" + hit.ExternalId, new RejectedBook(Label(server), hit.Title, hit.Authors, hit.Series, reason));
                         }
                     }
                 }
@@ -297,7 +319,36 @@ public sealed class BookService
             .ThenBy(b => b.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
         books = CollapseVolumes(books, variants).Take(8).ToList();
-        return new BookResult(DateTime.UtcNow, books, errors.Distinct().ToList(), adaptation, authors, english);
+        var linked = books.Select(b => b.ServerId + "|" + b.ExternalId).ToHashSet();
+        return new BookResult(DateTime.UtcNow, books, errors.Distinct().ToList(), adaptation, authors, english)
+        {
+            ExtraTitles = extra,
+            Queries = queries,
+            Rejected = rejected.Where(r => !linked.Contains(r.Key)).Select(r => r.Value).OrderBy(r => r.Server).ThenBy(r => r.Title).ToList()
+        };
+    }
+
+    private static string Label(BookServerConfig s) => string.IsNullOrWhiteSpace(s.Name) ? s.Kind : s.Name;
+
+    /// <summary>Null if the book fits, otherwise why not (shown by Explain).</summary>
+    internal static string? Judge(BookHit hit, IReadOnlyList<string> titleKeys, IReadOnlyList<string> sourceAuthors, bool titleOnlyAllowed)
+    {
+        if (Fits(hit, titleKeys, sourceAuthors, titleOnlyAllowed))
+        {
+            return null;
+        }
+
+        if (sourceAuthors.Count > 0 && hit.Authors.Count > 0 && !hit.Authors.Any(a => sourceAuthors.Any(s => TitleKeys.SameAuthor(a, s))))
+        {
+            return $"other author (expected {string.Join(", ", sourceAuthors)})";
+        }
+
+        if (!titleOnlyAllowed)
+        {
+            return "not an adaptation, title-only matches are off";
+        }
+
+        return $"neither title nor series is one of: {string.Join(" | ", titleKeys)}";
     }
 
     /// <summary>

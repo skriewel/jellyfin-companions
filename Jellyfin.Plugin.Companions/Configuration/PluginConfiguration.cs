@@ -25,6 +25,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public bool UseEnglishTitle { get; set; } = true;
 
+    /// <summary>Gets or sets the languages whose titles are looked up ("en, de"): manga are often on a German server under the German edition's title.</summary>
+    public string TitleLanguages { get; set; } = "en, de";
+
     /// <summary>Gets or sets how long book lookups are cached, in hours.</summary>
     public int CacheHours { get; set; } = 12;
 

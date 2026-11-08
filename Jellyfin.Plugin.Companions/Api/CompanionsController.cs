@@ -240,11 +240,14 @@ public class CompanionsController : ControllerBase
             originalTitle = item.OriginalTitle,
             sourceAuthors = authors,
             englishTitle = result?.EnglishTitle,
+            otherTitles = result?.ExtraTitles,
+            queries = result?.Queries,
             adaptation = BookService.IsAdaptation(item, authors),
             tags = item.Tags.Where(t => t.StartsWith("based on", StringComparison.OrdinalIgnoreCase)),
             soundtracks = item is MusicAlbum a ? _soundtracks.TitlesFor(a) : _soundtracks.AlbumsFor(item),
             books = result?.Books,
             covers,
+            notLinked = result?.Rejected,
             errors = result?.Errors
         });
     }

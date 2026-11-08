@@ -20,7 +20,7 @@ public sealed class EnglishTitles
 
     private readonly IProviderManager _providers;
     private readonly ILogger<EnglishTitles> _logger;
-    private readonly ConcurrentDictionary<Guid, (DateTime At, string? Title)> _cache = new();
+    private readonly ConcurrentDictionary<(Guid Id, string Language), (DateTime At, string? Title)> _cache = new();
 
     public EnglishTitles(IProviderManager providers, ILogger<EnglishTitles> logger)
     {
@@ -28,9 +28,35 @@ public sealed class EnglishTitles
         _logger = logger;
     }
 
-    public async Task<string?> GetAsync(BaseItem item, CancellationToken ct)
+    /// <summary>The titles in the given languages ("en, de"), without duplicates and without the ones Jellyfin already has.</summary>
+    public async Task<List<string>> GetManyAsync(BaseItem item, string languages, CancellationToken ct)
     {
-        if (_cache.TryGetValue(item.Id, out var hit) && DateTime.UtcNow - hit.At < MaxAge)
+        var result = new List<string>();
+        foreach (var lang in (languages ?? string.Empty).Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var title = await GetAsync(item, lang.Trim().ToLowerInvariant(), ct).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(title)
+                && !string.Equals(title, item.Name, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(title, item.OriginalTitle, StringComparison.OrdinalIgnoreCase)
+                && !result.Contains(title, StringComparer.OrdinalIgnoreCase))
+            {
+                result.Add(title);
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<string?> GetAsync(BaseItem item, CancellationToken ct) => await GetAsync(item, "en", ct).ConfigureAwait(false);
+
+    public async Task<string?> GetAsync(BaseItem item, string language, CancellationToken ct)
+    {
+        var country = language switch
+        {
+            "en" => "US", "de" => "DE", "fr" => "FR", "es" => "ES", "it" => "IT", "ja" => "JP", "pt" => "BR", "nl" => "NL",
+            _ => language.ToUpperInvariant()
+        };
+        if (_cache.TryGetValue((item.Id, language), out var hit) && DateTime.UtcNow - hit.At < MaxAge)
         {
             return hit.Title;
         }
@@ -49,7 +75,7 @@ public sealed class EnglishTitles
                 Series => await _providers.GetRemoteSearchResults<Series, SeriesInfo>(
                     new RemoteSearchQuery<SeriesInfo>
                     {
-                        SearchInfo = new SeriesInfo { Name = item.Name, Year = item.ProductionYear, ProviderIds = ids, MetadataLanguage = "en", MetadataCountryCode = "US" },
+                        SearchInfo = new SeriesInfo { Name = item.Name, Year = item.ProductionYear, ProviderIds = ids, MetadataLanguage = language, MetadataCountryCode = country },
                         SearchProviderName = "TheMovieDb",
                         IncludeDisabledProviders = true
                     },
@@ -57,7 +83,7 @@ public sealed class EnglishTitles
                 Movie => await _providers.GetRemoteSearchResults<Movie, MovieInfo>(
                     new RemoteSearchQuery<MovieInfo>
                     {
-                        SearchInfo = new MovieInfo { Name = item.Name, Year = item.ProductionYear, ProviderIds = ids, MetadataLanguage = "en", MetadataCountryCode = "US" },
+                        SearchInfo = new MovieInfo { Name = item.Name, Year = item.ProductionYear, ProviderIds = ids, MetadataLanguage = language, MetadataCountryCode = country },
                         SearchProviderName = "TheMovieDb",
                         IncludeDisabledProviders = true
                     },
@@ -71,10 +97,11 @@ public sealed class EnglishTitles
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogDebug(ex, "Companions: no English title for {Name}", item.Name);
+            _logger.LogDebug(ex, "Companions: no {Language} title for {Name}", language, item.Name);
         }
 
-        _cache[item.Id] = (DateTime.UtcNow, string.IsNullOrWhiteSpace(title) ? null : title.Trim());
-        return _cache[item.Id].Title;
+        var value = string.IsNullOrWhiteSpace(title) ? null : title.Trim();
+        _cache[(item.Id, language)] = (DateTime.UtcNow, value);
+        return value;
     }
 }

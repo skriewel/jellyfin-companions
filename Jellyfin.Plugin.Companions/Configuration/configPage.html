@@ -58,9 +58,14 @@
                 <div class="checkboxContainer checkboxContainer-withDescription">
                     <label class="emby-checkbox-label">
                         <input id="UseEnglishTitle" type="checkbox" is="emby-checkbox" />
-                        <span>Also search the English title</span>
+                        <span>Also search the titles in other languages</span>
                     </label>
-                    <div class="fieldDescription checkboxFieldDescription">Jellyfin keeps only the title in your library's language and the original title. Books and manga are often on the server under the English title ("Witch Hat Atelier" for "Atelier of Witch Hat"). It is looked up once per title through Jellyfin's own TMDB provider.</div>
+                    <div class="fieldDescription checkboxFieldDescription">Jellyfin keeps only the title in your library's language and the original title. Books and manga are often on the server under another one: the English title ("Witch Hat Atelier") or the title of the German edition ("Atelier of Witch Hat"). They are looked up once per title through Jellyfin's own TMDB provider.</div>
+                </div>
+                <div class="inputContainer">
+                    <label class="inputLabel inputLabelUnfocused" for="TitleLanguages">Title languages</label>
+                    <input id="TitleLanguages" type="text" is="emby-input" />
+                    <div class="fieldDescription">Language codes, separated by commas, e.g. "en, de".</div>
                 </div>
                 <div class="inputContainer">
                     <label class="inputLabel inputLabelUnfocused" for="CacheHours">Keep lookups for (hours)</label>
@@ -151,6 +156,7 @@
             var page = document.querySelector('#CompanionsConfigPage');
             var bools = ['Enabled', 'ShowSoundtracks', 'ShowBooks', 'OnlyAdaptations', 'UseEnglishTitle'];
             var numbers = ['CacheHours'];
+            var texts = ['TitleLanguages'];
             var fields = ['Kind', 'Name', 'Url', 'PublicUrl', 'ApiKey', 'Username', 'Password', 'OpdsPath', 'LinkTemplate'];
             var hints = {
                 Audiobookshelf: { key: 'API token', hint: 'Audiobookshelf 2.26 or newer: Settings → API Keys (or Users → your user → API token). A user that can see the book libraries is enough.' },
@@ -236,6 +242,7 @@
                 ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                     bools.forEach(function (k) { page.querySelector('#' + k).checked = !!config[k]; });
                     numbers.forEach(function (k) { page.querySelector('#' + k).value = config[k]; });
+                    texts.forEach(function (k) { page.querySelector('#' + k).value = config[k] || ''; });
                     page.querySelector('#cmpcServers').innerHTML = '';
                     (config.BookServers || []).forEach(addServer);
                 }).finally(function () { Dashboard.hideLoadingMsg(); });
@@ -247,6 +254,7 @@
                 ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                     bools.forEach(function (k) { config[k] = page.querySelector('#' + k).checked; });
                     numbers.forEach(function (k) { config[k] = parseInt(page.querySelector('#' + k).value, 10) || 12; });
+                    texts.forEach(function (k) { config[k] = page.querySelector('#' + k).value.trim(); });
                     config.BookServers = Array.prototype.map.call(page.querySelectorAll('.cmpc-server'), readServer)
                         .filter(function (s) { return s.Url; });
                     return ApiClient.updatePluginConfiguration(pluginId, config);
